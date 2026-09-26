@@ -290,6 +290,11 @@ namespace esphome
 
         void Levoit::publish_filter_stats_now()
         {
+            // On models where the MCU reports filter life, leave the sensor alone -
+            // the status decoder publishes the real value. Resetting the ESP-side
+            // CADR counters still happens, it just does not move this sensor.
+            if (this->filter_life_from_mcu())
+                return;
             float filter_left = this->calculate_filter_life_left_percent();
 #ifdef USE_SENSOR
             auto *se = this->sensors_[st_idx_(SensorType::FILTER_LIFE_LEFT)];
@@ -966,8 +971,10 @@ namespace esphome
                 this->publish_sensor(SensorType::CURRENT_CADR, current_cadr_hour);
             }
 
-            // Every 10 seconds: publish filter life left
-            if (now - last_filter_check >= 10000)
+            // Every 10 seconds: publish filter life left.
+            // Skipped where the MCU owns the value (Core200S) - it arrives in the
+            // status frame instead, and the estimate would immediately overwrite it.
+            if (!this->filter_life_from_mcu() && now - last_filter_check >= 10000)
             {
                 last_filter_check = now;
                 float filter_left = this->calculate_filter_life_left_percent();

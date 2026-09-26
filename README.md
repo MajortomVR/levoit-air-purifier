@@ -446,7 +446,26 @@ Auto mode options per model:
 
 ### Change Log - Levoit Component
 
-#### ESP Version: 1.5.0 - 2026.09.11
+#### ESP Version: 1.5.0 - 2026.09.26
+
+* **Core 200S: filter life now comes from the MCU.** The MCU keeps its own
+  filter counter and reports it in the status frame; the component was
+  ignoring it and showing an ESP-side estimate derived from `used_cadr`, which
+  sat at 100% and never moved. `filter_life_left` (and `filter_life_mcu`, if
+  configured) now publish the real value, and the ESP estimate is suppressed on
+  this model so it cannot overwrite it. Other models are unchanged
+  * **Fixes the Display switch reading permanently ON** on the Core 200S — the
+    same root cause. The status payload puts filter life at byte 6 and display
+    at byte 7, matching the Core 400S layout, but the Core 200S was decoded with
+    the Core 300S layout, so a filter value of `100` was read as "display on"
+  * **Filter Reset now resets the filter**, not just the CADR counters: the
+    button sends the MCU's own reset command (`01 E4 A5`), captured from the
+    stock firmware. Previously there was no core implementation of `resetFilter`
+    at all
+  * Decoded from UART captures in
+    [`devices/levoit-core200s/uart`](./devices/levoit-core200s/uart)
+* Fix `filter_low` device class — it is a `problem` binary sensor, not a
+  `battery` one, so a low filter now shows as a problem in Home Assistant
 
 * Add **Levoit Superior 6000S** (`model: SUPERIOR6000S`) — an evaporative
   humidifier on the same MCU protocol as the purifiers. Ported from

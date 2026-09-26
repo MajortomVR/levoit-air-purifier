@@ -201,6 +201,14 @@ namespace esphome
                 payload = {0x00, 0x64};
                 break;
 
+            // Core200S: clears the MCU's own filter counter. Captured from the stock
+            // firmware resetting the filter (devices/levoit-core200s/uart/filter_reset.txt).
+            // Sits next to setFilterLedOff/On (0x01 0xE2 0xA5) in the same family.
+            case CommandType::resetFilter:
+                msg_type = {0x01, 0xE4, 0xA5};
+                payload = {0x00};
+                break;
+
             default:
                 ESP_LOGW(TAG_CORE_CMD, "Command not implemented: %s", command_type_to_string(cmd));
                 return {};
