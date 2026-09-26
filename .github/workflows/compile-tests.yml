@@ -20,21 +20,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  levoit:
-    name: levoit · ${{ matrix.config }}
+  compile:
+    name: ${{ matrix.component }} · ${{ matrix.config }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        component: [levoit, philips]
         config:
           # every platform and every entity type - maximum codegen coverage
           - test-all-entities.yaml
           # only a fan: every optional platform absent. Catches sources that
-          # include a platform header without guarding on USE_LEVOIT_*.
+          # include a platform header without guarding on USE_<COMPONENT>_*.
           - test-fan-only.yaml
-          # levoit fan plus template entities on the other platforms. Defines the
-          # generic USE_SWITCH / USE_SELECT / ... without any levoit entity of
-          # that kind, which is the mismatch that broke the build before.
+          # component fan plus template entities on the other platforms. Defines
+          # the generic USE_SWITCH / USE_SELECT / ... without any entity of that
+          # kind from this component, which is the mismatch that broke the build.
           - test-foreign-platforms.yaml
     steps:
       - uses: actions/checkout@v4
@@ -51,16 +52,16 @@ jobs:
           path: |
             ~/.platformio
             ~/.cache/pip
-          key: pio-${{ runner.os }}-${{ hashFiles('components/levoit/tests/*.yaml') }}
+          key: pio-${{ runner.os }}-${{ hashFiles('components/*/tests/*.yaml') }}
           restore-keys: pio-${{ runner.os }}-
 
       - name: Install ESPHome
         run: pip install esphome
 
       - name: esphome config
-        working-directory: components/levoit/tests
+        working-directory: components/${{ matrix.component }}/tests
         run: esphome config ${{ matrix.config }}
 
       - name: esphome compile
-        working-directory: components/levoit/tests
+        working-directory: components/${{ matrix.component }}/tests
         run: esphome compile ${{ matrix.config }}

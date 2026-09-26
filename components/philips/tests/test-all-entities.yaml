@@ -1,0 +1,108 @@
+# Self-contained compile test - see README.md in this folder.
+esphome:
+  name: test-philips-all
+
+esp32:
+  board: seeed_xiao_esp32c3
+  framework:
+    type: esp-idf
+
+logger:
+  # GPIO20/21 are the C3's UART0 pins and GPIO20 carries the MCU link, so the
+  # logger has to go somewhere else.
+  hardware_uart: USB_SERIAL_JTAG
+  level: DEBUG
+
+# Dummy credentials on purpose - these tests must build without a secrets.yaml.
+# philips.cpp pulls in network headers, so a network component must be present.
+wifi:
+  ssid: "compile-test"
+  password: "compile-test"
+
+api:
+  encryption:
+    key: "mfEv/h5ZAzrr46UQ/Mt35PpgcbVPFlPNhlLMZzAol4w="
+
+external_components:
+  - source: ../..
+    components: [philips]
+
+uart:
+  - id: uart_mcu
+    rx_pin: GPIO20
+    tx_pin: GPIO10
+    baud_rate: 115200
+
+philips:
+  id: purifier
+  model: AC0951
+  uart_id: uart_mcu
+
+fan:
+  - platform: philips
+    philips: purifier
+    name: "Fan"
+
+switch:
+  - platform: philips
+    philips: purifier
+    name: "standby_sensor"
+    type: standby_sensor
+  - platform: philips
+    philips: purifier
+    name: "child_lock"
+    type: child_lock
+  - platform: philips
+    philips: purifier
+    name: "beep"
+    type: beep
+
+sensor:
+  - platform: philips
+    philips: purifier
+    name: "filter_clean"
+    type: filter_clean
+  - platform: philips
+    philips: purifier
+    name: "filter_lifetime"
+    type: filter_lifetime
+  - platform: philips
+    philips: purifier
+    name: "pm2_5"
+    type: pm2_5
+  - platform: philips
+    philips: purifier
+    name: "allergen_index"
+    type: allergen_index
+  - platform: philips
+    philips: purifier
+    name: "timer_remaining"
+    type: timer_remaining
+
+select:
+  - platform: philips
+    philips: purifier
+    name: "display_brightness"
+    type: display_brightness
+
+number:
+  - platform: philips
+    philips: purifier
+    name: "timer"
+    type: timer
+
+text_sensor:
+  - platform: philips
+    philips: purifier
+    name: "mcu_version"
+    type: mcu_version
+
+button:
+  - platform: philips
+    philips: purifier
+    name: "reset_prefilter"
+    type: reset_prefilter
+  - platform: philips
+    philips: purifier
+    name: "reset_hepa"
+    type: reset_hepa
