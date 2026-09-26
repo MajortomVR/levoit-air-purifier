@@ -41,6 +41,16 @@ fan:
     levoit: dev
     name: "Fan"
 
+# The light platform has no TYPE_MAP - it is the single Sprout LED ring - so it
+# needs listing explicitly, otherwise USE_LEVOIT_LIGHT and its codegen go
+# untested.
+light:
+  - platform: levoit
+    levoit: dev
+    name: "LED Ring"
+    gamma_correct: 0
+    default_transition_length: 0s
+
 switch:
   - platform: levoit
     levoit: dev
