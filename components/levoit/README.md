@@ -379,3 +379,229 @@ Special thanks to the original developers who reverse-engineered the Levoit prot
 
 This component is provided as-is for educational and personal use. Levoit and related trademarks are property of their respective owners.
 
+## Features
+
+Core200s
+
+![PCB back](../../devices/levoit-core200s/images/controls_sensors.png)
+![PCB back](../../devices/levoit-core200s/images/config_diag.png)
+
+Core300s - with Air Quality and Auto
+
+![PCB back](../../devices/levoit-core300s/images/filters.png)
+![PCB back](../../devices/levoit-core300s/images/config.png)
+
+#### Fan
+
+Native Home Assistant Fan component, with preset support.
+Available speed levels and presets are based on model.
+
+| Model | Speed Levels | Preset Modes |
+|---------|------------|-------------|
+| C200S | 1–3 | Manual, Sleep |
+| C300S | 1–3 | Auto, Manual, Sleep |
+| C400S | 1–4 | Auto, Manual, Sleep |
+| C600S | 1–4 | Auto, Manual, Sleep |
+| V100S | 1–4 | Auto, Manual, Sleep, Pet |
+| V200S | 1–4 | Auto, Manual, Sleep, Pet |
+| Sprout | 1–4 | Auto, Manual |
+| EverestAir | 1–3 | Auto, Turbo, Manual |
+
+The `fan_operating_mode` select exposes the active fan mode as a normal ESPHome select for dashboards that do not render fan presets directly. It stays synchronized with MCU fan-mode status and uses the same Manual / Sleep / Auto / Pet / Turbo model-specific modes as the fan preset path.
+
+
+#### Vent Angle & Cover (EverestAir)
+
+The Everest Air adds a **motorized vent louver** and a **cover/door sensor** not present on the other models:
+
+| Feature | Type | Config Key | Description |
+|---------|----|------------|-------------|
+| Vent Angle | number | `vent_angle` | Motorized louver angle, 45–90° (CMD `02 12 55`, status TLV `0x14`) **EverestAir only** |
+| Cover Open | binary_sensor | `cover_open` | Back/filter door open — the unit powers itself off while open (TLV `0x15`) **Sprout + EverestAir** |
+
+The vent angle is set as a number entity (45° = nearly closed/upward, 90° = fully open/forward). The MCU echoes the current angle back in status tag `0x14`, and it reads `0` while the unit is powered off.
+
+
+#### Display / Light
+
+| Feature | Type | Config Key | Description |
+|---------|----|------------|-------------|
+| Display | switch | `display` | Toggle the LED display on/off |
+| Child Lock | switch | `child_lock` | Disable physical buttons on the device |
+| Light Detect | switch | `light_detect` | Auto-dim display when ambient light is low **Vital Series + Core 600S + EverestAir** |
+| Night Light | select | `nightlight` | Night light brightness: Off / Mid / Full **Only Core200S** |
+
+#### Timer
+
+| Feature | Type | Config Key | Description |
+|---------|----|------------|-------------|
+| Timer | number | `timer` | Run timer in minutes |
+| Timer Set | text_sensor | `timer_duration_initial` | Originally set timer as readable string (e.g. "2h 30 min") |
+| Timer Remaining | text_sensor | `timer_duration_remaining` | Time left on active timer (e.g. "1h 15 min") |
+
+#### Filter Lifetime
+
+| Feature | Type | Config Key | Description |
+|---------|----|------------|-------------|
+| Filter Lifetime | number | `filter_lifetime_months` | Expected filter lifespan in months (1–12); used to compute Filter Life % on models other than Core200S |
+| Filter Life Left | sensor | `filter_life_left` | Remaining filter life as %; MCU-reported on Core200S, component-computed on other models ⁽¹⁾ |
+| Filter Low | binary_sensor | `filter_low` | `on` when Filter Life % drops below 5% ⁽¹⁾ |
+| Current CADR | sensor | `current_cadr` | Calculated Clean Air Delivery Rate at current fan speed in m³/h ⁽¹⁾ |
+| Reset Filter Stats | button | `reset_filter_stats` | Reset cumulative CADR and runtime counters, or send the MCU filter reset on Core200S — restores Filter Life % to 100% ⁽¹⁾ |
+
+> ⁽¹⁾ On Core200S, `filter_life_left` mirrors the MCU counter and `reset_filter_stats`
+> sends the MCU's filter reset command. On other models, these values are
+> computed by the component.
+
+#### Auto Mode
+
+| Feature | Type | Config Key | Description |
+|---------|----|------------|-------------|
+| Auto Mode | select | `auto_mode` | Auto mode type — options vary by model (see below) **Not for Core200S** |
+| Auto Mode Room Size | number | `efficiency_room_size` | MCU-reported room area for efficient auto mode in m² — reflects device status **Not for Core200S / EverestAir** |
+| Auto Mode Room Size Preset | number | `auto_profile_room_size_input` | Remembered Room Size target, automatically sent when selecting Room Size/Efficient auto profile. Persists across reboots so Default/Quiet status resets don't wipe the target. **Not for Core200S / EverestAir** |
+| Efficiency Counter | sensor | `efficiency_counter` | Seconds remaining at high fan speed in efficient auto mode **Vital only** |
+| Auto Mode High Fan Time | text_sensor | `auto_mode_room_size_high_fan` | Time still running at high speed in efficient auto mode, human readable **Vital only** |
+
+Auto Mode configures the purifier's automatic behavior and is distinct from the active fan preset/mode. On models with fan Auto support, changing Auto Mode enters the fan's Auto preset; direct fan speed changes switch the fan preset to Manual.
+
+When Room Size/Efficient is selected, the purifier uses **Auto Mode Room Size Preset** (`auto_profile_room_size_input`) as the coverage target and sends it to the MCU automatically. The **Auto Mode Room Size** number (`efficiency_room_size`) still reflects what the MCU reports back in status payloads — Default and Quiet profiles report `0`, which is normal.
+
+Auto mode options per model:
+
+| Model | Options | Room Size Range |
+|-------|---------|----------------|
+| C200S | — | up to 40 m² (430 ft²) |
+| C300S | Default / Quiet / Room Size | 9–50 m² (97–538 ft²) |
+| C400S | Default / Quiet / Room Size | 9–38 m² (97–409 ft²) |
+| C600S | Default / Quiet / Room Size / ECO | 9–147 m² (97–1,582 ft²) |
+| V100S | Default / Quiet / Efficient | 9–52 m² (97–560 ft²) |
+| V200S | Default / Quiet / Efficient | 9–87 m² (97–936 ft²) |
+| Sprout| Default / Quiet / Efficient | 9–57 m² (97–936 ft²) |
+| EverestAir| Default / Eco | — (no room-size setting) |
+
+#### Air Quality Sensors
+
+| Feature | Type | Config Key | Description |
+|---------|----|------------|-------------|
+| PM2.5 | sensor | `pm25` | Particulate matter concentration in µg/m³ from built-in sensor **Not for Core200S** |
+| PM1.0 | sensor | `pm1_0` | Particulate matter concentration in µg/m³ from built-in sensor **only Sprout and EverestAir** |
+| PM10 | sensor | `pm10` | Particulate matter concentration in µg/m³ from built-in sensor **only Sprout and EverestAir** |
+| AQI | sensor | `aqi` | Air Quality Index as reported by the MCU **Not for Core200S** |
+
+#### Info and Debug
+
+| Feature | Type | Config Key | Description |
+|---------|----|------------|-------------|
+| MCU Version | text_sensor | `mcu_version` | Firmware version string of the purifier MCU chip |
+| ESP Version | text_sensor | `esp_version` | ESPHome component version string |
+| Error | text_sensor | `error_message` | Device error status: "Ok" or "Sensor Error" **Not for Core200S** |
+
+## Change Log
+
+#### ESP Version: 1.5.0 - 2026.09.26
+
+* **Core 200S: filter life now comes from the MCU.** The MCU keeps its own
+  filter counter and reports it in the status frame; the component was
+  ignoring it and showing an ESP-side estimate derived from `used_cadr`, which
+  sat at 100% and never moved. `filter_life_left` (and `filter_life_mcu`, if
+  configured) now publish the real value, and the ESP estimate is suppressed on
+  this model so it cannot overwrite it. Other models are unchanged
+  * **Fixes the Display switch reading permanently ON** on the Core 200S — the
+    same root cause. The status payload puts filter life at byte 6 and display
+    at byte 7, matching the Core 400S layout, but the Core 200S was decoded with
+    the Core 300S layout, so a filter value of `100` was read as "display on"
+  * **Filter Reset now resets the filter**, not just the CADR counters: the
+    button sends the MCU's own reset command (`01 E4 A5`), captured from the
+    stock firmware. Previously there was no core implementation of `resetFilter`
+    at all
+  * Decoded from UART captures in
+    [`devices/levoit-core200s/uart`](../../devices/levoit-core200s/uart)
+* Fix `filter_low` device class — it is a `problem` binary sensor, not a
+  `battery` one, so a low filter now shows as a problem in Home Assistant
+
+* Add **Levoit Superior 6000S** (`model: SUPERIOR6000S`) — an evaporative
+  humidifier on the same MCU protocol as the purifiers. Ported from
+  [Jyers/esphome-projects](https://github.com/Jyers/esphome-projects)
+  * New entities: `auto_dry_power_off` / `auto_dry_water_empty` switches,
+    `humidity_target` and `timer` numbers, `humidity` / `temperature` /
+    `filter_life_mcu` / `timer_remaining` sensors, `auto_profile` /
+    `humidity_subtype` / `dry_level` selects, and `water_tank_empty` /
+    `humidifying` / `dry_active` binary sensors
+  * `select` and `number` gained Superior types; the fan now supports 9 speeds
+    and the Humidity / Dry modes
+  * **The timer runs on the ESP**, not the MCU: this MCU only stores a
+    "remaining" value pushed to it, so the component owns the countdown and
+    refreshes it once a minute. The `timer` number is in **hours** here, where
+    the purifiers use minutes
+  * **`dry_level` does not act on its own** — the select records Low/High and
+    the value is applied when Dry is picked on the fan entity
+* Fix a latent build bug: platform includes were guarded on the generic
+  `USE_SWITCH` / `USE_SENSOR` / … macros, which any component defines, so a
+  config with (say) a `template` switch but no `levoit` switch failed to
+  compile. Each platform now defines its own `USE_LEVOIT_*` guard
+* `publish_sensor` widened `uint32_t` → `float` so the humidifier can report
+  fractional temperature and humidity (it already converted internally)
+* ⚠️ Superior 6000S not verified on hardware — see
+  [the device README](../../devices/levoit-superior-6000s)
+
+#### ESP Version: 1.4.1 - 2026.09.08
+
+* Add `fan_operating_mode` select: the active fan mode as a normal ESPHome select, for dashboards that don't render fan presets (@EdenNelson, #50)
+  * Stays in sync with MCU fan-mode status and with changes made through the fan entity
+* Make fan mode commands coherent between the Manual and Auto paths (@EdenNelson, #48)
+* Fix Core room size round trip — value written and value read back now match (@EdenNelson, #46)
+* Fix: setting the same fan level while Sleep/Auto was active sent no UART command, so the device stayed in the preset. A speed call that leaves a non-Manual preset now counts as a change (@Bleialf, #53)
+* Add `auto_profile_room_size_input` number: persisted Room Size target for Room Size/Efficient auto profile (@EdenNelson, #56)
+  * Automatically sent to the MCU when Room Size/Efficient is selected — no manual "Apply" step needed
+  * Survives Default/Quiet status resets that report room size as `0`
+  * Restores saved target on reboot, clamped to model-specific min/max
+  * Model ranges: C300S 9–50 m², C400S 9–38 m², C600S 9–147 m², V100S 9–52 m², V200S 9–87 m²
+  * Sprout: Room Size/Efficient mode is protocol-inherited from Vital but unverified on hardware — `auto_profile_room_size_input` not included for Sprout
+* Clear the compiler warnings the component emits during an ESP-IDF build (@EdenNelson, #59)
+  * `types.h`: `command_type_to_string` is now `inline` instead of `static` — as a static function in a header it was reported unused by each of the nine translation units that include `types.h` without calling it, which accounted for most of the warning output
+  * Cast `uint32_t` log arguments to `unsigned` in the `ESP_LOGx` calls that mismatched `%u` (`uint32_t` is `unsigned long` on xtensa), including the VERBOSE-only sites in `core_commands.cpp`, `vital_commands.cpp` and `core_status.cpp`
+  * `decoder.cpp`: parenthesize the `&&` operands inside the `||` in the Core300S/400S status ptype test — grouping unchanged, only stated explicitly
+  * Fix the restore log labelling `total_runtime` as hours when the counter is incremented once per minute — 60× overstated, and disagreeing with the sibling line that already says "min". Log text only
+  * No behaviour change. The one warning left is the `-Wswitch` in `on_number_command`, which needs a decision on whether `white_noise_min` should reach the MCU
+
+#### ESP Version: 1.4.0 - 2026.06.14
+
+* Added Levoit Everest Air support 
+* Everest Air motorized vent louver as a number (45–90°, `vent_angle`, CMD `02 12 55`)
+* Everest Air back/cover door sensor as a binary_sensor (`cover_open`, status tag `0x15`) — unit powers off while open
+
+
+
+#### ESP Version: 1.3.1 - 2026.06.09
+
+* ESPHome min version updated to **2026.5.3**
+* Correct Core400S CADR and Room Size limits (@EdenNelson)
+* Fix fan preset modes for newer ESPHome (`set_supported_preset_modes` moved to `FanTraits`) (@EdenNelson)
+* Fix Core300S/400S falsely reporting "Sensor error" (removed incorrect status byte mapping)
+* Add Vital 200S Pro support for MCU FW 2.0.0 with bulk-prefs SET (@TheDave94)
+* LevoitSwitch: set has_state on publish to match Select/Number behavior (@TheDave94)
+* Fix race condition where the led stays blinking even after conenction is restored (@Ahmed-max)
+
+
+
+#### ESP Version: 1.3.0 - 2026.03.28
+
+* Added Core 600S support: 4 fan speeds, 4 auto modes (Default / Quiet / Room Size / ECO), Light Detect switch, CADR 641 m³/h
+* Added Vital 200S (Pro) support: same protocol as Vital 100S, tested with original ESP
+* Updated Auto Mode select to show model-specific options (3 for Core/Vital, 4 for Core 600S)
+
+
+#### ESP Version: 1.2.0-esphome - 2026.03.22
+
+* Added Core200s support and readme / example.
+* Renamed/moved repo to tuct/levoit - for easier collaboration with pull requests, ...
+
+#### 2026.03.21
+
+* Works with ESPHome 2026.3+
+* Sensors - added state class measurement -> allow statistics to be tracked
+
+#### 2026.01.15 ESPHome 2025.12.5+ Compatibility
+
+* The component has been updated for ESPHome 2025.12.5
