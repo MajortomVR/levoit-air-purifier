@@ -392,13 +392,15 @@ The vent angle is set as a number entity (45° = nearly closed/upward, 90° = fu
 
 | Feature | Type | Config Key | Description |
 |---------|----|------------|-------------|
-| Filter Lifetime | number | `filter_lifetime_months` | Expected filter lifespan in months (1–12); used to compute Filter Life % |
-| Filter Life Left | sensor | `filter_life_left` | Remaining filter life as % ⁽¹⁾ |
+| Filter Lifetime | number | `filter_lifetime_months` | Expected filter lifespan in months (1–12); used to compute Filter Life % on models other than Core200S |
+| Filter Life Left | sensor | `filter_life_left` | Remaining filter life as %; MCU-reported on Core200S, component-computed on other models ⁽¹⁾ |
 | Filter Low | binary_sensor | `filter_low` | `on` when Filter Life % drops below 5% ⁽¹⁾ |
 | Current CADR | sensor | `current_cadr` | Calculated Clean Air Delivery Rate at current fan speed in m³/h ⁽¹⁾ |
-| Reset Filter Stats | button | `reset_filter_stats` | Reset cumulative CADR and runtime counters — restores Filter Life % to 100% ⁽¹⁾ |
+| Reset Filter Stats | button | `reset_filter_stats` | Reset cumulative CADR and runtime counters, or send the MCU filter reset on Core200S — restores Filter Life % to 100% ⁽¹⁾ |
 
-> ⁽¹⁾ Computed by the component (not received from MCU), works on all models.
+> ⁽¹⁾ On Core200S, `filter_life_left` mirrors the MCU counter and `reset_filter_stats`
+> sends the MCU's filter reset command. On other models, these values are
+> computed by the component.
 
 #### Auto Mode
 
