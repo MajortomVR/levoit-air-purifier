@@ -1,0 +1,79 @@
+# Self-contained compile test - see README.md in this folder.
+esphome:
+  name: test-philips-foreign
+
+esp32:
+  board: seeed_xiao_esp32c3
+  framework:
+    type: esp-idf
+
+logger:
+  # GPIO20/21 are the C3's UART0 pins and GPIO20 carries the MCU link, so the
+  # logger has to go somewhere else.
+  hardware_uart: USB_SERIAL_JTAG
+  level: DEBUG
+
+# Dummy credentials on purpose - these tests must build without a secrets.yaml.
+# philips.cpp pulls in network headers, so a network component must be present.
+wifi:
+  ssid: "compile-test"
+  password: "compile-test"
+
+api:
+  encryption:
+    key: "mfEv/h5ZAzrr46UQ/Mt35PpgcbVPFlPNhlLMZzAol4w="
+
+external_components:
+  - source: ../..
+    components: [philips]
+
+uart:
+  - id: uart_mcu
+    rx_pin: GPIO20
+    tx_pin: GPIO10
+    baud_rate: 115200
+
+philips:
+  id: purifier
+  model: AC0650
+  uart_id: uart_mcu
+
+fan:
+  - platform: philips
+    philips: purifier
+    name: "Fan"
+
+# No philips entities on these platforms, but the platforms ARE in the build.
+# That defines USE_SWITCH / USE_SELECT / USE_NUMBER / ... while ESPHome copies
+# no philips/<platform>/ sources - the mismatch the USE_PHILIPS_* guards exist
+# to survive.
+switch:
+  - platform: template
+    name: "Foreign Switch"
+    optimistic: true
+
+select:
+  - platform: template
+    name: "Foreign Select"
+    optimistic: true
+    options: ["a", "b"]
+
+number:
+  - platform: template
+    name: "Foreign Number"
+    optimistic: true
+    min_value: 0
+    max_value: 10
+    step: 1
+
+sensor:
+  - platform: template
+    name: "Foreign Sensor"
+
+text_sensor:
+  - platform: template
+    name: "Foreign Text Sensor"
+
+button:
+  - platform: template
+    name: "Foreign Button"
