@@ -111,7 +111,10 @@ class Levoit : public Component, public uart::UARTDevice {
   bool try_get_number_state(NumberType type, float &out) const;
   bool try_get_select_index(SelectType type, size_t &out) const;
   bool try_get_switch_state(SwitchType type, bool &out) const;
-  void apply_fan_status(bool power, uint8_t speed, uint32_t mode);
+  // power/speed/mode are the same signed values LevoitFan::apply_device_status
+  // takes: -1 means "not reported in this frame, leave the field alone". Do not
+  // narrow these - the Vital and Superior decoders rely on that sentinel.
+  void apply_fan_status(int power, int speed, int mode);
 
   void start_timer(){this->timer_active_ = true; this->timer_stop_pending_ = false;};
   void stop_timer(){this->timer_active_ = false;};

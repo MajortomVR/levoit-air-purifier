@@ -469,7 +469,8 @@ namespace esphome
         int spd = have_speed ? (int)speed : -1;
         int mod = have_mode ? (int)mode : -1;
         ESP_LOGV(TAG_VITAL, "Applying to fan: power=%d speed=%d mode=%d", pwr, spd, mod);
-      self->apply_fan_status(pwr, spd, mod);
+      if (self != nullptr)
+        self->apply_fan_status(pwr, spd, mod);
     }
 
   } // namespace levoit

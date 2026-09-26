@@ -343,7 +343,7 @@ namespace esphome
 #endif
         }
 
-        void Levoit::apply_fan_status(bool power, uint8_t speed, uint32_t mode)
+        void Levoit::apply_fan_status(int power, int speed, int mode)
         {
 #ifdef USE_LEVOIT_FAN
             if (this->fan_ != nullptr)
@@ -843,6 +843,7 @@ namespace esphome
         
         void Levoit::track_cadr_usage()
         {
+#ifdef USE_LEVOIT_FAN
             // Get fan state - check if fan is ON using .state member
             if (this->fan_ != nullptr && this->fan_->state) {
                 // Fan is enabled - track usage
@@ -868,10 +869,15 @@ namespace esphome
                 pref_used_cadr_.save(&used_cadr_);
                 pref_total_runtime_.save(&total_runtime_);
             }
+#endif
         }
 
         uint32_t Levoit::calculate_current_cadr_per_hour() const
         {
+#ifndef USE_LEVOIT_FAN
+            // No fan entity: nothing to derive a duty cycle from.
+            return 0;
+#else
             if (this->fan_ == nullptr || !this->fan_->state)
                 return 0;
             int speed = this->fan_->speed;
@@ -905,6 +911,7 @@ namespace esphome
             }
 
             return result;
+#endif
         }
 
         float Levoit::calculate_filter_life_left_percent() const
