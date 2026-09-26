@@ -288,6 +288,10 @@ namespace esphome
             this->sendCommand(setSproutAqiScale);
         }
 
+        // Single entry point for publishing the ESP-side filter estimate. Every
+        // caller goes through here so the MCU-owned guard cannot be forgotten in one
+        // of them - which is exactly what happened when the periodic CADR path kept
+        // overwriting the Core200S value once a minute.
         void Levoit::publish_filter_stats_now()
         {
             // On models where the MCU reports filter life, leave the sensor alone -
@@ -795,14 +799,8 @@ namespace esphome
                     
                 }
                 
-                // Calculate and publish filter life left (once per minute here)
-                float filter_left = this->calculate_filter_life_left_percent();
-#ifdef USE_SENSOR
-                auto *se = this->sensors_[st_idx_(SensorType::FILTER_LIFE_LEFT)];
-                if (se != nullptr)
-                    se->publish_state(filter_left);
-#endif
-                this->push_filter_pct_if_changed(filter_left);
+                // Publish filter life left (once per minute here)
+                this->publish_filter_stats_now();
 
                 // Save to preferences every minute when running
                 pref_used_cadr_.save(&used_cadr_);
@@ -971,20 +969,12 @@ namespace esphome
                 this->publish_sensor(SensorType::CURRENT_CADR, current_cadr_hour);
             }
 
-            // Every 10 seconds: publish filter life left.
-            // Skipped where the MCU owns the value (Core200S) - it arrives in the
-            // status frame instead, and the estimate would immediately overwrite it.
-            if (!this->filter_life_from_mcu() && now - last_filter_check >= 10000)
+            // Every 10 seconds: publish filter life left. publish_filter_stats_now()
+            // skips models where the MCU owns the value (Core200S).
+            if (now - last_filter_check >= 10000)
             {
                 last_filter_check = now;
-                float filter_left = this->calculate_filter_life_left_percent();
-#ifdef USE_SENSOR
-                auto *se = this->sensors_[st_idx_(SensorType::FILTER_LIFE_LEFT)];
-                if (se != nullptr)
-                    se->publish_state(filter_left);
-#endif
-                this->publish_binary_sensor(BinarySensorType::FILTER_LOW, filter_left < 5.0f);
-                this->push_filter_pct_if_changed(filter_left);
+                this->publish_filter_stats_now();
             }
 
             if (this->model_ == ModelType::SUPERIOR6000S)
