@@ -77,11 +77,30 @@ namespace esphome
       {
         if (payload_len < 12)
           return;
-        bool display_on = payload[6] != 0;
+        // payload[6] is the MCU's filter life percent, not a display flag: it reads
+        // 0x64 (100) on a fresh filter, matching what the stock app shows. Display
+        // sits at payload[7], as on the Core400S - the Core200S does not follow the
+        // Core300S layout here. Reading [6] as a bool pinned Display permanently on.
+        uint8_t filter_life_pct = payload[6];
+        bool display_on = payload[7] != 0;
         uint8_t fan_speed = payload[5];
         bool child_lock = payload[10] != 0;  // Display Lock = child lock
         uint8_t nightlight_raw = payload[11]; // 0x00=off, 0x32=mid, 0x64=full
         uint8_t nightlight_idx = (nightlight_raw == 0x32) ? 1 : (nightlight_raw == 0x64) ? 2 : 0;
+
+        // The MCU keeps this counter itself (SC95F8617) and the ESP cannot reset it,
+        // so it is published straight through rather than estimated from used_cadr.
+        if (filter_life_pct <= 100)
+        {
+          self->publish_sensor(SensorType::FILTER_LIFE_LEFT, filter_life_pct);
+          self->publish_sensor(SensorType::FILTER_LIFE_MCU, filter_life_pct);
+          self->publish_binary_sensor(BinarySensorType::FILTER_LOW, filter_life_pct < 5);
+        }
+        else
+        {
+          ESP_LOGW(TAG_CORE, "Core200S filter life byte out of range (%u), ignoring",
+                   (unsigned) filter_life_pct);
+        }
 
         self->publish_switch(SwitchType::DISPLAY, display_on);
         self->publish_switch(SwitchType::CHILD_LOCK, child_lock);
