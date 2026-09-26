@@ -19,6 +19,10 @@ humidifiers (Superior 6000S), enabling local control without cloud dependency.
 ### Hardware Setup
 
 - ⚠️ Requires disassembly and serial access (TX, RX, GND, EN, GPIO0) initially
+- 💡 Before opening anything, the FCC filing for most Levoit models includes
+  **internal photos of the bare PCB** — browse grantee
+  [`2ARBY`](https://fccid.io/2ARBY) (Arovast Corporation) to find yours and
+  see the module and test pads in advance
 
 
 #### Option 1: Flash Original ESP32 Directly
