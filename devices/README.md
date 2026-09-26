@@ -100,6 +100,16 @@ Choose the approach that fits your device and risk tolerance:
   - Cleanest for long-term custom firmware; cannot easily revert to stock without rework.
 
 General tips:
+- **Look at the board before opening it.** Levoit's FCC filings are under
+  grantee [`2ARBY`](https://fccid.io/2ARBY) (Arovast Corporation) and most
+  include internal photos of the bare PCB — enough to spot the Wi-Fi module
+  and the test pads. Examples:
+  [Core 200S](https://fccid.io/2ARBY-CORE-200S) ·
+  [Core 300S](https://fccid.io/2ARBY-CORE-300S) ·
+  [Core 600S](https://fccid.io/2ARBY-CORE600S) ·
+  [Sprout](https://fccid.io/2ARBY-B381S). Note the hyphenation is
+  inconsistent (`CORE-300S` but `CORE600S`), so browse the grantee index
+  rather than guessing an ID.
 - Backup with `esptool read_flash 0 ALL levoit.bin` if possible.
 - Common wiring: 3V3, GND, TX→MCU RX, RX→MCU TX, EN, GPIO0 (for boot).
 - For WiFi LED/filter LED behaviors and entity list, see the component README.

@@ -39,8 +39,42 @@ still welcome, just a different shape (see the 🔴 *Custom HW* rows in the READ
 table).
 
 Record what you find: board photos, chip markings, and any FCC ID on the module.
-An FCC ID gets you [internal photos and test reports](https://fccid.io), which
-often answer questions without further disassembly.
+
+### Check the PCB before you open anything
+
+Anything sold in the US with a radio in it has an FCC filing, and those filings
+usually include **internal photos** — the manufacturer's own pictures of the
+bare board. That is often enough to answer the ESP32-plus-MCU question, spot the
+Wi-Fi module and see where the test pads are, *before* you buy a device or take
+one apart.
+
+Search [fccid.io](https://fccid.io) for the ID printed on the device's rating
+label, or browse by manufacturer:
+
+| Grantee | Maker | Covers |
+|---------|-------|--------|
+| [`2ARBY`](https://fccid.io/2ARBY) | Arovast Corporation | **Levoit** / VeSync — purifiers *and* humidifiers |
+| [`P53`](https://fccid.io/P53) | MXCHIP | The Wi-Fi modules Philips uses, e.g. [`P53-EMC6069`](https://fccid.io/P53-EMC6069) |
+
+Known Levoit filings, as examples of the naming:
+
+| Device | FCC ID |
+|--------|--------|
+| Core 200S | [`2ARBY-CORE-200S`](https://fccid.io/2ARBY-CORE-200S) |
+| Core 300S | [`2ARBY-CORE-300S`](https://fccid.io/2ARBY-CORE-300S) |
+| Core 600S | [`2ARBY-CORE600S`](https://fccid.io/2ARBY-CORE600S) |
+| Sprout | [`2ARBY-B381S`](https://fccid.io/2ARBY-B381S) |
+| Dual 200S humidifier | [`2ARBY-DUAL200S`](https://fccid.io/2ARBY-DUAL200S) |
+| OasisMist LV450S / LV600S | [`2ARBY-LV450S`](https://fccid.io/2ARBY-LV450S) · [`2ARBY-LV600S`](https://fccid.io/2ARBY-LV600S) |
+
+Note the inconsistent hyphenation — `CORE-300S` but `CORE600S` — so don't guess
+an ID from the model name; use the [grantee index](https://fccid.io/2ARBY).
+
+Two caveats. Internal photos are sometimes held under **short-term
+confidentiality** and only appear months after the grant date, and schematics
+and block diagrams are almost always permanently confidential — the Philips
+AC2889 filing is an example. And the photographed revision may not match the
+unit in your hands. Treat them as reconnaissance, not ground truth.
 
 ## 2. Identify the UART pins and capture dumps
 
