@@ -447,15 +447,16 @@ The vent angle is set as a number entity (45° = nearly closed/upward, 90° = fu
 
 | Feature | Type | Config Key | Description |
 |---------|----|------------|-------------|
-| Filter Lifetime | number | `filter_lifetime_months` | Expected filter lifespan in months (1–12); used to compute Filter Life % on models other than Core200S |
-| Filter Life Left | sensor | `filter_life_left` | Remaining filter life as %; MCU-reported on Core200S, component-computed on other models ⁽¹⁾ |
+| Filter Lifetime | number | `filter_lifetime_months` | Expected filter lifespan in months (1–12); used to compute Filter Life % |
+| Filter Life Left | sensor | `filter_life_left` | Remaining filter life as %, computed by the component from accumulated CADR |
 | Filter Low | binary_sensor | `filter_low` | `on` when Filter Life % drops below 5% ⁽¹⁾ |
 | Current CADR | sensor | `current_cadr` | Calculated Clean Air Delivery Rate at current fan speed in m³/h ⁽¹⁾ |
-| Reset Filter Stats | button | `reset_filter_stats` | Reset cumulative CADR and runtime counters, or send the MCU filter reset on Core200S — restores Filter Life % to 100% ⁽¹⁾ |
+| Reset Filter Stats | button | `reset_filter_stats` | Reset cumulative CADR and runtime counters — restores Filter Life % to 100%. On Core200S it additionally sends the MCU its own filter reset |
 
-> ⁽¹⁾ On Core200S, `filter_life_left` mirrors the MCU counter and `reset_filter_stats`
-> sends the MCU's filter reset command. On other models, these values are
-> computed by the component.
+> On every model the filter percentage is computed by the component from
+> accumulated CADR — no Levoit MCU reports it. The Core200S MCU keeps a
+> counter of its own that the stock app resets, so the button clears that as
+> well, but it is not what feeds the sensor.
 
 #### Auto Mode
 
@@ -505,22 +506,30 @@ Auto mode options per model:
 
 #### ESP Version: 1.5.0 - 2026.09.26
 
-* **Core 200S: filter life now comes from the MCU.** The MCU keeps its own
-  filter counter and reports it in the status frame; the component was
-  ignoring it and showing an ESP-side estimate derived from `used_cadr`, which
-  sat at 100% and never moved. `filter_life_left` (and `filter_life_mcu`, if
-  configured) now publish the real value, and the ESP estimate is suppressed on
-  this model so it cannot overwrite it. Other models are unchanged
-  * **Fixes the Display switch reading permanently ON** on the Core 200S — the
-    same root cause. The status payload puts filter life at byte 6 and display
-    at byte 7, matching the Core 400S layout, but the Core 200S was decoded with
-    the Core 300S layout, so a filter value of `100` was read as "display on"
-  * **Filter Reset now resets the filter**, not just the CADR counters: the
-    button sends the MCU's own reset command (`01 E4 A5`), captured from the
-    stock firmware. Previously there was no core implementation of `resetFilter`
-    at all
-  * Decoded from UART captures in
-    [`devices/levoit-core200s/uart`](../../devices/levoit-core200s/uart)
+* **Core 200S: the status frame is now fully decoded**, byte by byte, against
+  stock-firmware UART captures in
+  [`devices/levoit-core200s/uart`](../../devices/levoit-core200s/uart). Each
+  mapping below was confirmed by matching a command sent by the stock app
+  against the status frame it produced — see the
+  [byte map](../../devices/levoit-core200s/README.md#status-frame-byte-map)
+  * **Fixes the filter life estimate decaying 25% too slowly.** The CADR
+    calculation used a 4-speed divisor for the Core 200S, which has 3 speeds,
+    so every level accumulated only three quarters of the air it should have.
+    This is the likely cause of reports that Core 200S filter life "does not
+    work"
+  * **Filter Reset now also resets the MCU's own counter** (`01 E4 A5`,
+    captured from the stock firmware). Previously there was no core
+    implementation of `resetFilter` at all. The sensor itself is still driven by
+    the ESP-side estimate
+  * Confirmed unchanged: display at byte 6 (brightness, `0x00`/`0x64`), child
+    lock at byte 10, nightlight at byte 11. Bytes 8 and 9 are `0x00` in every
+    frame of every capture
+  * **Filter life is not on the wire.** A capture taken while the stock app
+    displayed 99% reports byte 6 as `0x64` (100), and no message in any capture
+    carries 99 or a runtime counter — the Core 200S filter percentage is kept
+    by the stock Wi-Fi module and the cloud, not the MCU. An earlier 1.5.0
+    pre-release read byte 6 as MCU filter life and moved display to byte 7;
+    both were wrong and are reverted here
 * Fix `filter_low` device class — it is a `problem` binary sensor, not a
   `battery` one, so a low filter now shows as a problem in Home Assistant
 

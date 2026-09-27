@@ -357,11 +357,6 @@ namespace esphome
 
         void Levoit::publish_filter_stats_now()
         {
-            // On models where the MCU reports filter life, leave the sensor alone -
-            // the status decoder publishes the real value. Resetting the ESP-side
-            // CADR counters still happens, it just does not move this sensor.
-            if (this->filter_life_from_mcu())
-                return;
             float filter_left = this->calculate_filter_life_left_percent();
 #ifdef USE_LEVOIT_SENSOR
             auto *se = this->sensors_[st_idx_(SensorType::FILTER_LIFE_LEFT)];
@@ -895,8 +890,11 @@ namespace esphome
                 return 0;
             }
 
-            // Determine max speed based on model (Core300S has 3 speeds)
-            uint32_t max_speed = (this->model_ == ModelType::CORE300S)     ? 3u
+            // Determine max speed based on model. Core200S and Core300S have 3
+            // speeds - using 4 here undercounted their CADR by 25% at every level,
+            // so the filter estimate decayed a quarter too slowly.
+            uint32_t max_speed = (this->model_ == ModelType::CORE200S ||
+                                  this->model_ == ModelType::CORE300S)        ? 3u
                                  : (this->model_ == ModelType::SUPERIOR6000S) ? 9u
                                                                               : 4u;
             if (speed <= 0 || (uint32_t)speed > max_speed)
@@ -1038,8 +1036,7 @@ namespace esphome
                 this->publish_sensor(SensorType::CURRENT_CADR, current_cadr_hour);
             }
 
-            // Every 10 seconds: publish filter life left. publish_filter_stats_now()
-            // skips models where the MCU owns the value (Core200S).
+            // Every 10 seconds: publish filter life left.
             if (now - last_filter_check >= 10000)
             {
                 last_filter_check = now;
