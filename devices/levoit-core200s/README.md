@@ -66,6 +66,7 @@ channel `Async Serial [1]` is the Wi-Fi module and `Async Serial` is the MCU.
 | `nightlight.txt` | Night light Off → Mid → Full → Mid → Off |
 | `childlock.txt` | Child lock on → off → on |
 | `display_on_off.txt` | Display on → off |
+| `filter_from_device.txt` | Filter reset with the **button on the unit**, at 99% |
 
 Frame layout is the common Levoit one:
 `A5 | type | counter | len | 00 | cksum | mt0 mt1 mt2 | 00 | payload`, total
@@ -81,10 +82,10 @@ sent against the status frame that followed it in the same capture.
 |------|---------|--------|--------------|
 | 0–2 | MCU firmware version, patch/minor/major | `0B 00 02` → 2.0.11 | matches the version the app shows |
 | 3 | Power | `00` / `01` | `01 00 A0` in `startup.txt` |
-| 4 | Fan mode | always `00` (the 200S has no Auto) | — |
+| 4 | Fan mode | `00` Manual, `01` Sleep (no Auto on the 200S) | `01` seen in `filter_from_device.txt` |
 | 5 | Fan speed | `00`–`03` | `01 60 A2` in `startup.txt` |
 | 6 | **Display brightness** | `00` off, `64` on | `01 05 A1` in `display_on_off.txt` |
-| 7 | **Display on/off** | `00` / `01` | moves with byte 6 in the same frame |
+| 7 | unresolved | `00` / `01` | see below |
 | 8 | unused | `00` in every frame of every capture | — |
 | 9 | unused | `00` in every frame of every capture | — |
 | 10 | **Child lock** | `00` / `01` | `01 00 D1` in `childlock.txt` |
@@ -127,15 +128,39 @@ happened.
 | `01 03 A0` | `00 00`, `00 32`, `00 64` | Night light off / mid / full — all three seen |
 | `01 29 A1` | `00 F4 01 F4 01 00`, `01 7D 00 7D 00 00` | Wi-Fi LED, `<mode> <on_ms LE16> <off_ms LE16> 00`. Off with 500/500 ms and on with 125/125 ms; the blinking variant (`02 …`) was not seen |
 | `01 E2 A5` | `00` | Named "filter LED off" in the component; only this payload was ever sent, always shortly after boot, so the name is unverified |
-| `01 E4 A5` | `00` | Reset the MCU filter counter, sent when the filter was reset in the app |
+| `01 E4 A5` | `00` | Reset the MCU filter counter, sent when the filter was reset in the app. The MCU sends the same type back with `01` — see below |
 
-Two things still unexplained:
+### The MCU pushes a filter reset (`01 E4 A5`)
 
-* The MCU's reply to `01 E4 A5` carries a payload byte `0B`, where every other
+`01 E4 A5` travels **both ways**, and the reverse direction is the more
+interesting one. From `filter_from_device.txt`, with the filter reset using the
+button on the unit rather than the app:
+
+```
+12.755  MCU -> module   typ=22   01 E4 A5   01     unsolicited push
+12.761  module -> MCU   typ=52   01 E4 A5          plain ack
+```
+
+So the MCU reports the event as a normal `0x22` request that the module
+acknowledges like any other. ESPHome handles this: a panel filter reset clears
+the ESP-side CADR counters too, so the sensor follows the button on the unit.
+
+This is also the only filter-related message the MCU ever originates. It carries
+no percentage — just the fact that a reset happened.
+
+### Still unexplained
+
+* **Byte 7.** In `display_on_off.txt` it moved together with byte 6 under
+  `01 05 A1`, which made it look like a display flag. It is not that simple: in
+  `filter_from_device.txt` byte 6 goes `00` → `64` while byte 7 stays `00`
+  throughout, and `filter_99.txt` shows `64`/`00` as well. Byte 6 is the one the
+  display command writes, so that is what drives the Display switch; byte 7 is
+  left undecoded.
+* **The `0B` on the reply** to a module-initiated `01 E4 A5`, where every other
   acknowledgement in every capture is empty.
-* Byte 7 was `01` in four captures and `00` throughout `filter_99.txt`, where
-  the unit was powered off — but `startup.txt` also shows `01` with the power
-  off, so the off-state behaviour of bytes 6 and 7 is not fully pinned.
+* **Byte 6 changing with no command on the wire** — seen in
+  `filter_from_device.txt` around the button presses, which is consistent with
+  it reflecting the actual display state rather than a stored setting.
 
 ## Install New ESP32 (Recommended)
 

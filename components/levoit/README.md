@@ -521,6 +521,11 @@ Auto mode options per model:
     captured from the stock firmware). Previously there was no core
     implementation of `resetFilter` at all. The sensor itself is still driven by
     the ESP-side estimate
+  * **A filter reset done with the button on the unit now resets the sensor
+    too.** `01 E4 A5` turns out to be bidirectional: the MCU pushes it back with
+    payload `0x01` when the panel button is used, and the component now clears
+    its CADR counters on that. Handled ahead of the payload-dedup cache, so two
+    panel resets in a row both take effect
   * Confirmed unchanged: display at byte 6 (brightness, `0x00`/`0x64`), child
     lock at byte 10, nightlight at byte 11. Bytes 8 and 9 are `0x00` in every
     frame of every capture
