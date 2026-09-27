@@ -104,11 +104,28 @@ no other message in any capture carries a filter percentage or a runtime
 counter. `display_on_off.txt` then showed byte 6 tracking the display command
 directly.
 
-So the Core 200S filter percentage is kept by the **stock Wi-Fi module** and the
-cloud, not by the MCU. ESPHome therefore computes it the same way as on every
-other model, from accumulated CADR. The MCU does keep a counter of its own that
-the stock app resets with `01 E4 A5` (`filter_reset.txt`), and the Reset Filter
-Stats button sends that too.
+So the percentage the app shows is kept by the **stock Wi-Fi module** and the
+cloud, not by the MCU. ESPHome therefore computes its own the same way as on
+every other model, from accumulated CADR.
+
+The MCU is not oblivious, though — it just never reports a number. There are
+**three independent filter counters** on this device:
+
+| Counter | Owner | Visible as | Reset by |
+|---------|-------|------------|----------|
+| Percentage shown in the VeSync app | Stock Wi-Fi module + cloud | the app only | the app |
+| Internal filter timer | **MCU** | the red filter light on the unit | the panel button, or `01 E4 A5 00` |
+| CADR estimate | ESPHome | `filter_life_left` | Reset Filter Stats |
+
+The MCU's own timer is confirmed by units running ESPHome rather than the stock
+module: the red filter light still comes on after a few months, and ESPHome has
+no code path that lights it — it only uses that LED to signal Wi-Fi state during
+boot, and stops as soon as Wi-Fi connects. So the MCU decides on its own when
+the filter is due. It reports that decision only as a lamp, never as a value on
+the UART.
+
+Reset Filter Stats clears both the ESPHome estimate and, via `01 E4 A5`, the
+MCU's timer and its light.
 
 ### Commands seen from the stock module
 
