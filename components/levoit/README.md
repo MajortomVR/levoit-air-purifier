@@ -512,11 +512,18 @@ Auto mode options per model:
   mapping below was confirmed by matching a command sent by the stock app
   against the status frame it produced — see the
   [byte map](../../devices/levoit-core200s/README.md#status-frame-byte-map)
-  * **Fixes the filter life estimate decaying 25% too slowly.** The CADR
+  * **Fixes the filter life estimate never moving off 100%.** The per-minute
+    accumulation did `cadr_per_hour / 60` in integer arithmetic, which
+    truncates to **zero** for any model under 60 m³/h at the current speed — a
+    Core 200S on speed 1 (55 m³/h) or in Sleep (34 m³/h), and a Sprout on
+    speed 1 (36 m³/h), accumulated nothing at all, so the sensor sat at exactly
+    100% indefinitely. Higher speeds lost 28–46% to the same truncation. The
+    remainder is now carried between minutes
+  * **Fixes the estimate decaying 25% too slowly on top of that.** The CADR
     calculation used a 4-speed divisor for the Core 200S, which has 3 speeds,
-    so every level accumulated only three quarters of the air it should have.
-    This is the likely cause of reports that Core 200S filter life "does not
-    work"
+    so every level accumulated only three quarters of the air it should have
+  * Fixes the Superior 6000S losing **speeds 5–9** entirely: the accumulator was
+    gated on `speed <= 4`, while its fan has 9
   * **Filter Reset now also resets the MCU's own counter** (`01 E4 A5`,
     captured from the stock firmware). Previously there was no core
     implementation of `resetFilter` at all. The sensor itself is still driven by

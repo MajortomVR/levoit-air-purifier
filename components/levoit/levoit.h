@@ -230,6 +230,10 @@ class Levoit : public Component, public uart::UARTDevice {
   
   // Internal tracked values (persisted in preferences)
   uint32_t used_cadr_{0};
+  // Sub-m³ carry for the per-minute CADR accumulation, always < 60. Deliberately
+  // not persisted: a reboot loses under 1 m³ against a filter capacity in the
+  // hundreds of thousands.
+  uint32_t cadr_remainder_{0};
   uint32_t total_runtime_{0};
   ESPPreferenceObject pref_used_cadr_;
   ESPPreferenceObject pref_total_runtime_;
