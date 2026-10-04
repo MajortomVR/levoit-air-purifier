@@ -871,11 +871,25 @@ namespace esphome
                 // Publish filter life left (once per minute here)
                 this->publish_filter_stats_now();
 
-                // Save to preferences every minute when running
-                pref_used_cadr_.save(&used_cadr_);
-                pref_total_runtime_.save(&total_runtime_);
+                // Persist at most every 15 running minutes (issue 009): flash wears
+                // out under per-minute saves on 24/7 units, and a quarter hour
+                // of accounting is immaterial to the filter estimate.
+                if (++pref_save_counter_ >= 15) {
+                    pref_save_counter_ = 0;
+                    pref_used_cadr_.save(&used_cadr_);
+                    pref_total_runtime_.save(&total_runtime_);
+                }
             }
 #endif
+        }
+
+        void Levoit::on_shutdown()
+        {
+            // Flush throttled counters so a reboot loses at most the minutes
+            // since the last 15-minute save (issue 009). Filter reset already
+            // persists via set_used_cadr()/set_total_runtime().
+            pref_used_cadr_.save(&used_cadr_);
+            pref_total_runtime_.save(&total_runtime_);
         }
 
         uint32_t Levoit::calculate_current_cadr_per_hour() const

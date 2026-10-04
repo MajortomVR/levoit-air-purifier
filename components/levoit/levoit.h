@@ -83,6 +83,7 @@ class Levoit : public Component, public uart::UARTDevice {
 
   void setup() override;
   void loop() override;
+  void on_shutdown() override;
   void dump_config() override;
   void set_device_model(std::string model);
   void process_message(uint8_t *msg, int len);
@@ -235,6 +236,10 @@ class Levoit : public Component, public uart::UARTDevice {
   // hundreds of thousands.
   uint32_t cadr_remainder_{0};
   uint32_t total_runtime_{0};
+  // Minutes of fan runtime since the last preference save. Saves are throttled
+  // to every 15 running minutes (issue 009) - worst-case loss is a quarter
+  // hour of accounting against a filter capacity in the hundreds of thousands.
+  uint8_t pref_save_counter_{0};
   ESPPreferenceObject pref_used_cadr_;
   ESPPreferenceObject pref_total_runtime_;
   BulkPrefsCache bulk_prefs_;
