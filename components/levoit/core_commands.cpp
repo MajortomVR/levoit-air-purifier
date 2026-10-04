@@ -28,6 +28,12 @@ namespace esphome
                 payload = {0x00};
                 break;
 
+            // NOTE (issue 028): stock firmware sends {0x00, 0x01, speed} here
+            // (devices/levoit-core200s/uart/startup.txt, PR #71 command table),
+            // but this builder sends {0x01, 0x01, speed} and the MCU accepts it
+            // on all Core models. First-byte semantics unknown - do NOT align
+            // to 0x00 without a hardware test (unit off, both variants, observe
+            // power + speed effect).
             case CommandType::setDeviceFanLvl1:
                 msg_type = {0x01, 0x60, 0xA2};
                 payload = {0x01, 0x01, 0x01};
