@@ -246,7 +246,7 @@ Each block: `[tag:1] [len:1] [value:len]`.
 | Command | CMD bytes | Payload | Notes |
 |---------|-----------|---------|-------|
 | Power on/off | `01 00 A0` | `{0x01}` / `{0x00}` | |
-| Fan speed 1–4 | `01 60 A2` | `{0x01, 0x01, speed}` | speed = 1–4 |
+| Fan speed 1–4 | `01 60 A2` | `{0x01, 0x01, speed}` | speed = 1–4. Component sends first byte `0x01`; stock captures show `0x00` — semantics unknown, do not align without a hardware test (issue 028) |
 | Fan mode | `01 E0 A5` | `{mode}` | 0=Manual, 1=Sleep, 2=Auto |
 | Display on | `01 05 A1` | `{0x64}` | brightness full |
 | Display off | `01 05 A1` | `{0x00}` | |
