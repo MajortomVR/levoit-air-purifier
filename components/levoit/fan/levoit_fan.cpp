@@ -162,6 +162,19 @@ namespace esphome
         void LevoitFan::apply_device_status(int power, int speed_level, int mode)
         {
             bool dirty = false;
+
+            // Reject modes the model cannot be in before anything below can
+            // apply them (issue 006). The Core200S has no Auto/Turbo/Pet modes
+            // (no PM sensor; select offers Manual/Sleep only), so any other
+            // value is a stray/corrupt byte. Downgrade to "keep current" so
+            // power/speed still apply but neither the preset nor the operating
+            // mode select can be set to something the device cannot be in.
+            if (mode != -1 && parent_ != nullptr &&
+                parent_->get_model() == ModelType::CORE200S && mode != 0 && mode != 1)
+            {
+                ESP_LOGW(TAG, "Ignoring unsupported fan mode %d for CORE200S", mode);
+                mode = -1;
+            }
             
             // power: -1 = keep current
             if (power != -1)
